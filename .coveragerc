@@ -1,0 +1,10 @@
+[run]
+omit =
+    conftest.py
+    */dist-packages/*
+    */site-packages/*
+    */__init__.py
+    */etc/*
+    */tests/*
+    *_pb2.py
+    setup.py
