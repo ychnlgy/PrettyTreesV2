@@ -1,9 +1,13 @@
 import math
 from dataclasses import dataclass
 
+import pyglet
+
 from .geometry import Point
 from .sprite_factory import BranchSpriteFactory
 from .utils import cosineInterpolate, randDecay, randVariance
+
+RENDERING_GROUP_RESOLUTION = 10
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -11,6 +15,7 @@ class BranchState:
     angle: float
     length: float
     width: float
+    depth: float
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -62,6 +67,9 @@ class Branch:
             width=cosineInterpolate(
                 self._startState.width, self._endState.width, self._progress
             ),
+            depth=cosineInterpolate(
+                self._startState.depth, self._endState.depth, self._progress
+            ),
         )
         self._updateSpriteState()
 
@@ -86,6 +94,10 @@ class Branch:
         self._sprite.scale_x = self._currentState.length / spriteWidth
         # NOTE: the height of the sprite is actually the width of the branch
         self._sprite.scale_y = self._currentState.width / spriteHeight
+        self._sprite.z = self._currentState.depth
+        self._sprite.group = pyglet.graphics.Group(
+            int(self._currentState.depth * RENDERING_GROUP_RESOLUTION)
+        )
 
     def _computeFoodIntake(
         self, food: float, offspringConfig: OffspringConfig
@@ -99,11 +111,10 @@ class Branch:
         return foodToConsume, foodForOffspring
 
     def _feedOffspring(self, food: float, offspringConfig: OffspringConfig) -> None:
-        n = len(self._offspring)
         terminalPosition = self._computeTerminalPosition()
         for child in self._offspring:
             child.setPosition(terminalPosition)
-            child.grow(food / n, offspringConfig)
+            child.grow(food, offspringConfig)
 
     def _attemptSpawnOffspring(self, offspringConfig: OffspringConfig) -> None:
         if (
@@ -120,14 +131,17 @@ class Branch:
     def _sampleStartState(self, offspringConfig: OffspringConfig) -> BranchState:
         """Samples a start state for an offspring branch based on the current state."""
         angle = randVariance(self._currentState.angle, offspringConfig.angleVariance)
-        return BranchState(angle=angle, length=0.0, width=0.0)
+        return BranchState(
+            angle=angle, length=0.0, width=0.0, depth=self._currentState.depth
+        )
 
     def _sampleEndState(self, offspringConfig: OffspringConfig) -> BranchState:
         """Samples an end state for an offspring branch based on the end state."""
         angle = randVariance(self._endState.angle, offspringConfig.angleVariance)
+        depth = randVariance(self._endState.depth, offspringConfig.depthVariance)
         length = randDecay(self._endState.length, offspringConfig.lengthDecayRange)
         width = randDecay(self._endState.width, offspringConfig.thicknessDecayRange)
-        return BranchState(angle=angle, length=length, width=width)
+        return BranchState(angle=angle, length=length, width=width, depth=depth)
 
     def _computeTerminalPosition(self) -> Point:
         angleRad = -self._currentState.angle / 180.0 * math.pi

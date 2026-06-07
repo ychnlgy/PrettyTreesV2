@@ -41,6 +41,7 @@ class SolidColorBranchTexture(BranchTextureInterface):
             self._image,
             x=position.x,
             y=position.y,
+            z=0.0,
             batch=batch,
             program=program,
         )

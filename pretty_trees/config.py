@@ -16,3 +16,5 @@ class Config:
     startBranchState: BranchState
     endBranchState: BranchState
     offspringConfig: OffspringConfig
+
+    depthEffectMultiplier: float

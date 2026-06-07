@@ -18,7 +18,7 @@ BRANCH_FRAGMENT_SHADER_PATH = SHADER_DIRECTORY / "branch_fragment.glsl"
 
 
 def main(config: Config) -> None:
-    window = pyglet.window.Window(1200, 800, caption="Pretty Trees")
+    window = pyglet.window.Window(1200, 900, caption="Pretty Trees")
     batch = pyglet.graphics.Batch()
 
     vertShader = readFile(BRANCH_VERTEX_SHADER_PATH)
@@ -46,6 +46,7 @@ def main(config: Config) -> None:
     with shaderProgram:
         shaderProgram["branch_curvature_origin"] = curvature.origin.asTuple()
         shaderProgram["branch_curvature_radius"] = curvature.radius
+        shaderProgram["depth_effect_multiplier"] = config.depthEffectMultiplier
 
     @window.event
     def on_draw() -> None:
@@ -65,18 +66,19 @@ if __name__ == "__main__":
             midThickness=0.65,
             endThickness=0.80,
         ),
-        startBranchState=BranchState(angle=-90.0, length=0.0, width=0.0),
-        endBranchState=BranchState(angle=-90.0, length=100.0, width=20.0),
+        startBranchState=BranchState(angle=-90.0, length=0.0, width=0.0, depth=0.0),
+        endBranchState=BranchState(angle=-90.0, length=100.0, width=20.0, depth=-0.5),
         offspringConfig=OffspringConfig(
             numChildren=2,
-            minThickness=1,
-            minLength=10,
+            minThickness=1.2,
+            minLength=10.0,
             fractionalFoodIntake=0.5,
             # variation parameters
-            thicknessDecayRange=(0.6, 0.75),
+            thicknessDecayRange=(0.7, 0.85),
             lengthDecayRange=(0.8, 0.95),
             angleVariance=30.0,
-            depthVariance=0.15,
+            depthVariance=0.05,
         ),
+        depthEffectMultiplier=0.7,
     )
     main(config)

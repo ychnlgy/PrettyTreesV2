@@ -10,6 +10,7 @@ in vec2 scale;
 in float rotation;  // radians
 
 out vec2 uv;
+out float depth;
 
 uniform WindowBlock
 {
@@ -24,4 +25,5 @@ void main() {
 
     gl_Position = window.projection * window.view * vec4(final, position.z + translate.z, 1.0);
     uv = tex_coords.xy;
+    depth = translate.z;
 }
