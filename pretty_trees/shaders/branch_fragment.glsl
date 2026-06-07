@@ -6,7 +6,16 @@ out vec4 final_color;
 
 uniform sampler2D sprite_texture;
 
+// custom uniforms
+uniform vec2 branch_curvature_origin;
+uniform float branch_curvature_radius;
+
 void main() {
+    // check if uv.y is outside of the circle defined by branch_curvature
+    // float dy2 = pow(branch_curvature_radius, 2) - pow(uv.x - branch_curvature_origin.x, 2);
+    // float maxY = branch_curvature_origin.y - sqrt(dy2);
+    // float maxY = branch_curvature_origin.y + branch_curvature_radius + 1000;
+
     vec4 tex_color = texture(sprite_texture, uv);
     final_color = tex_color;
 }

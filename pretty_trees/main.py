@@ -4,6 +4,8 @@ import pyglet
 
 from .branch_texture import SolidColorBranchTexture
 from .color import Color
+from .config import BranchCurvatureConfig, Config
+from .curvature import computeCurvatureCircle
 from .geometry import Point
 from .utils import readFile
 
@@ -13,7 +15,7 @@ BRANCH_VERTEX_SHADER_PATH = SHADER_DIRECTORY / "branch_vertex.glsl"
 BRANCH_FRAGMENT_SHADER_PATH = SHADER_DIRECTORY / "branch_fragment.glsl"
 
 
-def main() -> None:
+def main(config: Config) -> None:
     window = pyglet.window.Window(800, 600, caption="Pretty Trees")
     batch = pyglet.graphics.Batch()
 
@@ -31,6 +33,14 @@ def main() -> None:
         shaderProgram,
     )
 
+    computeCurvatureCircle(
+        midThickness=config.branchCurvature.midThickness,
+        endThickness=config.branchCurvature.endThickness,
+    )
+    # with shaderProgram:
+    #     shaderProgram["branch_curvature_origin"] = curvature.origin.asTuple()
+    #     shaderProgram["branch_curvature_radius"] = curvature.radius
+
     @window.event
     def on_draw() -> None:
         window.clear()
@@ -44,4 +54,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    config = Config(
+        branchCurvature=BranchCurvatureConfig(
+            midThickness=0.65,
+            endThickness=0.80,
+        )
+    )
+    main(config)

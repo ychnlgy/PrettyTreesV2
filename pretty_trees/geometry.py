@@ -7,6 +7,9 @@ class Point:
     x: float
     y: float
 
+    def asTuple(self) -> tuple[float, float]:
+        return (self.x, self.y)
+
 
 @dataclass(frozen=True, kw_only=True)
 class Circle:

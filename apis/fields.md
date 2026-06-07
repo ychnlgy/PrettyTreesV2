@@ -2,8 +2,10 @@
 <pre>
 classes
 └── pretty_trees
-    └── geometry.py
-        └── <a href='#circle'>Circle</a>
+    ├── geometry.py
+    │   └── <a href='#circle'>Circle</a>
+    └── config.py
+        └── <a href='#config'>Config</a>
 </pre>
 
 ### Circle
@@ -27,13 +29,40 @@ class Circle:
 
 #### Requirements
 <pre>
-<a href='../pretty_trees/geometry.py#L11-L42'>Circle</a>
+<a href='../pretty_trees/geometry.py#L11-L37'>Circle</a>
 └── <a href='../pretty_trees/geometry.py#L5-L9'>Point</a>
 </pre>
 
 #### Dependents
 <pre>
-<a href='../pretty_trees/geometry.py#L11-L42'>Circle</a>
+<a href='../pretty_trees/geometry.py#L11-L37'>Circle</a>
+</pre>
+
+#### Neighbors
+(None)
+
+### Config
+Back to [top](#contents).
+
+```python
+from pretty_trees.config import Config
+```
+
+```python
+@dataclass(frozen=True, kw_only=True)
+class Config:
+  branchCurvature: BranchCurvatureConfig
+```
+
+#### Requirements
+<pre>
+<a href='../pretty_trees/config.py#L10-L13'>Config</a>
+└── <a href='../pretty_trees/config.py#L4-L8'>BranchCurvatureConfig</a>
+</pre>
+
+#### Dependents
+<pre>
+<a href='../pretty_trees/config.py#L10-L13'>Config</a>
 </pre>
 
 #### Neighbors
