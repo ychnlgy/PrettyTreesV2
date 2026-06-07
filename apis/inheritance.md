@@ -6,8 +6,8 @@ classes
     │   └── <a href='#branch'>Branch</a>
     ├── branch_texture.py
     │   └── <a href='#branchtextureinterface'>BranchTextureInterface</a>
-    └── tree.py
-        └── <a href='#tree'>Tree</a>
+    └── sprite_factory.py
+        └── <a href='#spritefactoryinterface'>SpriteFactoryInterface</a>
 </pre>
 
 ### Branch
@@ -19,17 +19,21 @@ from pretty_trees.branch import Branch
 
 ```python
 class Branch:
-  ...
+  def __init__(self, spriteFactory: BranchSpriteFactory, position: Point, startState: BranchState, endState: BranchState) -> None: ...
+
+  def grow(self, food: float, offspringConfig: OffspringConfig) -> None: ...
+
+  def setPosition(self, position: Point) -> None: ...
 ```
 
 #### Requirements
 <pre>
-<a href='../pretty_trees/branch.py#L1-L3'>Branch</a>
+<a href='../pretty_trees/branch.py#L30-L127'>Branch</a>
 </pre>
 
 #### Dependents
 <pre>
-<a href='../pretty_trees/branch.py#L1-L3'>Branch</a>
+<a href='../pretty_trees/branch.py#L30-L127'>Branch</a>
 </pre>
 
 #### Neighbors
@@ -46,47 +50,55 @@ from pretty_trees.branch_texture import BranchTextureInterface
 class BranchTextureInterface(ABC):
   @abstractmethod
   def createSprite(self, position: Point, batch: Batch, program: ShaderProgram) -> Sprite: ...
+
+  @abstractmethod
+  def getDimensions(self) -> tuple[float, float]: ...
 ```
 
 #### Requirements
 <pre>
-<a href='../pretty_trees/branch_texture.py#L12-L21'>BranchTextureInterface</a>
+<a href='../pretty_trees/branch_texture.py#L12-L25'>BranchTextureInterface</a>
 </pre>
 
 #### Dependents
 <pre>
-<a href='../pretty_trees/branch_texture.py#L12-L21'>BranchTextureInterface</a>
-└── <a href='../pretty_trees/branch_texture.py#L23-L43'>SolidColorBranchTexture</a>
+<a href='../pretty_trees/branch_texture.py#L12-L25'>BranchTextureInterface</a>
+└── <a href='../pretty_trees/branch_texture.py#L27-L50'>SolidColorBranchTexture</a>
 </pre>
 
 #### Neighbors
-(None)
+| Neighbor | Similarity | Common Properties |
+| --- | --- | --- |
+| <a href='../pretty_trees/sprite_factory.py#L9-L17'>SpriteFactoryInterface</a> | 50% | `getDimensions` |
 
-### Tree
+### SpriteFactoryInterface
 Back to [top](#contents).
 
 ```python
-from pretty_trees.tree import Tree
+from pretty_trees.sprite_factory import SpriteFactoryInterface
 ```
 
 ```python
-class Tree:
-  def __init__(self, batch: Batch, shaderProgram: ShaderProgram, branchTexture: BranchTextureInterface) -> None: ...
+class SpriteFactoryInterface(ABC):
+  @abstractmethod
+  def create(self, position: Point) -> Sprite: ...
 
-  def addBranch(self, position: Point) -> None: ...
-
-  def update(self, dt: float) -> None: ...
+  @abstractmethod
+  def getDimensions(self) -> tuple[float, float]: ...
 ```
 
 #### Requirements
 <pre>
-<a href='../pretty_trees/tree.py#L7-L30'>Tree</a>
+<a href='../pretty_trees/sprite_factory.py#L9-L17'>SpriteFactoryInterface</a>
 </pre>
 
 #### Dependents
 <pre>
-<a href='../pretty_trees/tree.py#L7-L30'>Tree</a>
+<a href='../pretty_trees/sprite_factory.py#L9-L17'>SpriteFactoryInterface</a>
+└── <a href='../pretty_trees/sprite_factory.py#L19-L39'>BranchSpriteFactory</a>
 </pre>
 
 #### Neighbors
-(None)
+| Neighbor | Similarity | Common Properties |
+| --- | --- | --- |
+| <a href='../pretty_trees/branch_texture.py#L12-L25'>BranchTextureInterface</a> | 50% | `getDimensions` |

@@ -52,17 +52,22 @@ from pretty_trees.config import Config
 @dataclass(frozen=True, kw_only=True)
 class Config:
   branchCurvature: BranchCurvatureConfig
+  startBranchState: BranchState
+  endBranchState: BranchState
+  offspringConfig: OffspringConfig
 ```
 
 #### Requirements
 <pre>
-<a href='../pretty_trees/config.py#L10-L13'>Config</a>
-└── <a href='../pretty_trees/config.py#L4-L8'>BranchCurvatureConfig</a>
+<a href='../pretty_trees/config.py#L11-L18'>Config</a>
+├── <a href='../pretty_trees/config.py#L5-L9'>BranchCurvatureConfig</a>
+├── <a href='../pretty_trees/branch.py#L9-L14'>BranchState</a>
+└── <a href='../pretty_trees/branch.py#L16-L28'>OffspringConfig</a>
 </pre>
 
 #### Dependents
 <pre>
-<a href='../pretty_trees/config.py#L10-L13'>Config</a>
+<a href='../pretty_trees/config.py#L11-L18'>Config</a>
 </pre>
 
 #### Neighbors

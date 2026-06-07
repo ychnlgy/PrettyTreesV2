@@ -5,8 +5,8 @@ import pyglet
 from .color import Color
 from .geometry import Point
 
-DEFAULT_WIDTH = 100
-DEFAULT_HEIGHT = 50
+DEFAULT_WIDTH = 10
+DEFAULT_HEIGHT = 10
 
 
 class BranchTextureInterface(abc.ABC):
@@ -18,6 +18,10 @@ class BranchTextureInterface(abc.ABC):
         program: pyglet.graphics.shader.ShaderProgram,
     ) -> pyglet.sprite.Sprite:
         """Creates a pyglet sprite."""
+
+    @abc.abstractmethod
+    def getDimensions(self) -> tuple[float, float]:
+        """Returns the dimensions of the sprite as (width, height)."""
 
 
 class SolidColorBranchTexture(BranchTextureInterface):
@@ -40,3 +44,6 @@ class SolidColorBranchTexture(BranchTextureInterface):
             batch=batch,
             program=program,
         )
+
+    def getDimensions(self) -> tuple[float, float]:
+        return self._image.width, self._image.height

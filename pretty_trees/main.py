@@ -2,12 +2,13 @@ import pathlib
 
 import pyglet
 
+from .branch import Branch, BranchState, OffspringConfig
 from .branch_texture import SolidColorBranchTexture
 from .color import Color
 from .config import BranchCurvatureConfig, Config
 from .curvature import computeCurvatureCircle
 from .geometry import Point
-from .tree import Tree
+from .sprite_factory import BranchSpriteFactory
 from .utils import readFile
 
 CURRENT_DIRECTORY = pathlib.Path(__file__).parent
@@ -17,7 +18,7 @@ BRANCH_FRAGMENT_SHADER_PATH = SHADER_DIRECTORY / "branch_fragment.glsl"
 
 
 def main(config: Config) -> None:
-    window = pyglet.window.Window(800, 600, caption="Pretty Trees")
+    window = pyglet.window.Window(1200, 800, caption="Pretty Trees")
     batch = pyglet.graphics.Batch()
 
     vertShader = readFile(BRANCH_VERTEX_SHADER_PATH)
@@ -28,8 +29,15 @@ def main(config: Config) -> None:
     )
 
     branchTexture = SolidColorBranchTexture(Color(r=0, g=120, b=180))
-    tree = Tree(batch=batch, shaderProgram=shaderProgram, branchTexture=branchTexture)
-    tree.addBranch(Point(x=400, y=300))
+    spriteFactory = BranchSpriteFactory(
+        batch=batch, shaderProgram=shaderProgram, branchTexture=branchTexture
+    )
+    root = Branch(
+        spriteFactory=spriteFactory,
+        position=Point(x=600, y=100),
+        startState=config.startBranchState,
+        endState=config.endBranchState,
+    )
 
     curvature = computeCurvatureCircle(
         midThickness=config.branchCurvature.midThickness,
@@ -45,7 +53,7 @@ def main(config: Config) -> None:
         batch.draw()
 
     def update(dt: float) -> None:
-        tree.update(dt)
+        root.grow(food=dt * 2.0, offspringConfig=config.offspringConfig)
 
     pyglet.clock.schedule_interval(update, 1 / 60)
     pyglet.app.run()
@@ -56,6 +64,19 @@ if __name__ == "__main__":
         branchCurvature=BranchCurvatureConfig(
             midThickness=0.65,
             endThickness=0.80,
-        )
+        ),
+        startBranchState=BranchState(angle=-90.0, length=0.0, width=0.0),
+        endBranchState=BranchState(angle=-90.0, length=100.0, width=20.0),
+        offspringConfig=OffspringConfig(
+            numChildren=2,
+            minThickness=1,
+            minLength=10,
+            fractionalFoodIntake=0.5,
+            # variation parameters
+            thicknessDecayRange=(0.6, 0.75),
+            lengthDecayRange=(0.8, 0.95),
+            angleVariance=30.0,
+            depthVariance=0.15,
+        ),
     )
     main(config)
