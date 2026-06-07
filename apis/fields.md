@@ -29,13 +29,13 @@ class Circle:
 
 #### Requirements
 <pre>
-<a href='../pretty_trees/geometry.py#L11-L37'>Circle</a>
-└── <a href='../pretty_trees/geometry.py#L5-L9'>Point</a>
+<a href='../pretty_trees/geometry.py#L14-L40'>Circle</a>
+└── <a href='../pretty_trees/geometry.py#L5-L12'>Point</a>
 </pre>
 
 #### Dependents
 <pre>
-<a href='../pretty_trees/geometry.py#L11-L37'>Circle</a>
+<a href='../pretty_trees/geometry.py#L14-L40'>Circle</a>
 </pre>
 
 #### Neighbors

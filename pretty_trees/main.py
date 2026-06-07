@@ -7,6 +7,7 @@ from .color import Color
 from .config import BranchCurvatureConfig, Config
 from .curvature import computeCurvatureCircle
 from .geometry import Point
+from .tree import Tree
 from .utils import readFile
 
 CURRENT_DIRECTORY = pathlib.Path(__file__).parent
@@ -27,19 +28,16 @@ def main(config: Config) -> None:
     )
 
     branchTexture = SolidColorBranchTexture(Color(r=0, g=120, b=180))
-    branchTexture.createSprite(
-        Point(x=400, y=300),
-        batch,
-        shaderProgram,
-    )
+    tree = Tree(batch=batch, shaderProgram=shaderProgram, branchTexture=branchTexture)
+    tree.addBranch(Point(x=400, y=300))
 
-    computeCurvatureCircle(
+    curvature = computeCurvatureCircle(
         midThickness=config.branchCurvature.midThickness,
         endThickness=config.branchCurvature.endThickness,
     )
-    # with shaderProgram:
-    #     shaderProgram["branch_curvature_origin"] = curvature.origin.asTuple()
-    #     shaderProgram["branch_curvature_radius"] = curvature.radius
+    with shaderProgram:
+        shaderProgram["branch_curvature_origin"] = curvature.origin.asTuple()
+        shaderProgram["branch_curvature_radius"] = curvature.radius
 
     @window.event
     def on_draw() -> None:
@@ -47,7 +45,7 @@ def main(config: Config) -> None:
         batch.draw()
 
     def update(dt: float) -> None:
-        pass
+        tree.update(dt)
 
     pyglet.clock.schedule_interval(update, 1 / 60)
     pyglet.app.run()
