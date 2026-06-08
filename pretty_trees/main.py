@@ -12,7 +12,7 @@ from .constants import (
 )
 from .curvature import computeCurvatureCircle
 from .geometry import Point
-from .scene import AggregateScene, BasicTexturedScene, RedSunScene
+from .scene import AggregateScene, BasicTexturedScene, GalaxyScene, RedSunScene
 from .sprite_factory import BranchSpriteFactory
 from .utils import readFile
 
@@ -46,14 +46,22 @@ def main(config: Config) -> None:
     scene = AggregateScene()
     scene.addScene(
         BasicTexturedScene(
-            lifeTime=0.1,
+            lifeTime=1.0,
             root=root,
             config=config,
         )
     )
     scene.addScene(
         RedSunScene(
-            lifeTime=10.0,
+            lifeTime=1.0,
+            root=root,
+            config=config,
+            windowSize=windowSize,
+        )
+    )
+    scene.addScene(
+        GalaxyScene(
+            lifeTime=20.0,
             root=root,
             config=config,
             windowSize=windowSize,
@@ -108,6 +116,7 @@ if __name__ == "__main__":
             minThickness=1.2,
             minLength=10.0,
             fractionalFoodIntake=0.5,
+            malnutrition=0.95,
             # variation parameters
             thicknessDecayRange=(0.7, 0.85),
             lengthDecayRange=(0.8, 0.95),
@@ -115,6 +124,6 @@ if __name__ == "__main__":
             depthVariance=0.15,
         ),
         depthEffectMultiplier=0.0,
-        growthSpeed=2.0,
+        growthSpeed=4.0,
     )
     main(config)

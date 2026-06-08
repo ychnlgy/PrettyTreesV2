@@ -25,6 +25,7 @@ class OffspringConfig:
     minThickness: float
     minLength: float
     fractionalFoodIntake: float
+    malnutrition: float
 
     # random variation
     thicknessDecayRange: tuple[float, float]
@@ -54,6 +55,8 @@ class Branch:
         self._progress = 0.0
         self._offspring: list[Branch] = []
 
+        self._propagatingTexture: BranchTextureInterface | None = None
+
     def grow(self, food: float, offspringConfig: OffspringConfig) -> None:
         foodToConsume, foodForOffspring = self._computeFoodIntake(food, offspringConfig)
         self._capProgress(foodToConsume)
@@ -74,10 +77,8 @@ class Branch:
         )
         self._updateSpriteState()
 
-        if foodForOffspring:
-            self._feedOffspring(foodForOffspring, offspringConfig)
-        else:
-            self._attemptSpawnOffspring(offspringConfig)
+        self._feedOffspring(foodForOffspring, offspringConfig)
+        self._attemptSpawnOffspring(offspringConfig)
 
     def setPosition(self, position: Point) -> None:
         self._position = position
@@ -90,10 +91,22 @@ class Branch:
         for child in self._offspring:
             child.replaceImage(newTexture)
 
+    def propagateImage(self, newTexture: BranchTextureInterface) -> None:
+        if self._propagatingTexture is not None:
+            for child in self._offspring:
+                child.propagateImage(self._propagatingTexture)
+        self._propagatingTexture = newTexture
+        self._sprite.image = newTexture.getImage()
+
+    # === PROTECTED ===
+
+    def getProgress(self) -> float:
+        return self._progress
+
     # === PRIVATE ===
 
     def _capProgress(self, food: float) -> None:
-        self._progress = min(self._progress + food, 1.0)
+        self._progress = max(0.0, min(self._progress + food, 1.0))
 
     def _updateSpriteState(self) -> None:
         self._sprite.rotation = self._currentState.angle / 180.0 * math.pi
@@ -111,11 +124,22 @@ class Branch:
     ) -> tuple[float, float]:
         if not self._offspring:
             return food, 0.0
-        foodToConsume = min(
-            food * (1.0 - offspringConfig.fractionalFoodIntake), 1.0 - self._progress
-        )
+        foodToConsume = self._computeFoodToConsume(food, offspringConfig)
         foodForOffspring = food - foodToConsume
         return foodToConsume, foodForOffspring
+
+    def _computeFoodToConsume(
+        self, food: float, offspringConfig: OffspringConfig
+    ) -> float:
+        if food >= 0:
+            return min(
+                food * (1.0 - offspringConfig.fractionalFoodIntake),
+                1.0 - self._progress,
+            )
+        target = food
+        if self._offspring:
+            target *= 1.0 - offspringConfig.malnutrition
+        return max(target, -self._progress)
 
     def _feedOffspring(self, food: float, offspringConfig: OffspringConfig) -> None:
         terminalPosition = self._computeTerminalPosition()
@@ -127,6 +151,7 @@ class Branch:
         if (
             self._currentState.length >= offspringConfig.minLength
             and self._currentState.width >= offspringConfig.minThickness
+            and not self._offspring
         ):
             for _ in range(offspringConfig.numChildren):
                 startState = self._sampleStartState(offspringConfig)
@@ -134,6 +159,12 @@ class Branch:
                 position = self._computeTerminalPosition()
                 child = Branch(self._spriteFactory, position, startState, endState)
                 self._offspring.append(child)
+        else:
+            self._offspring = [
+                offspring
+                for offspring in self._offspring
+                if offspring.getProgress() > 0.0
+            ]
 
     def _sampleStartState(self, offspringConfig: OffspringConfig) -> BranchState:
         """Samples a start state for an offspring branch based on the current state."""

@@ -5,16 +5,33 @@ from collections import deque
 import pyglet
 
 from .branch import Branch
+from .branch_texture import SolidColorBranchTexture
+from .color import Color
 from .config import Config
-from .constants import SHADOW_FRAGMENT_SHADER_PATH, SHADOW_VERTEX_SHADER_PATH, TREE_Y
+from .constants import (
+    GALAXY_TEXTURE_PATH,
+    REFLECTION_FRAGMENT_SHADER_PATH,
+    REFLECTION_VERTEX_SHADER_PATH,
+    SHADOW_FRAGMENT_SHADER_PATH,
+    SHADOW_VERTEX_SHADER_PATH,
+    TREE_Y,
+)
 from .geometry import Point
 from .utils import readFile
 
 
 class SceneInterface(abc.ABC):
     @abc.abstractmethod
+    def setGrowthDirection(self, growthDirection: float) -> None:
+        """Sets the growth direction for the scene, where 1.0 is normal growth and negative values reverse growth."""
+
+    @abc.abstractmethod
     def update(self, dt: float) -> bool:
         """Updates the scene by a given time delta, returning False if the scene concluded."""
+
+    @abc.abstractmethod
+    def initialize(self) -> None:
+        """Called when the scene becomes active between scene transitions."""
 
     @abc.abstractmethod
     def predraw(self) -> None:
@@ -33,11 +50,20 @@ class AggregateScene(SceneInterface):
     def addScene(self, scene: SceneInterface) -> None:
         self._scenes.append(scene)
 
+    def setGrowthDirection(self, growthDirection: float) -> None:
+        raise NotImplementedError
+
     def update(self, dt: float) -> bool:
-        if self._scenes and not self._scenes[0].update(dt):
-            if len(self._scenes) > 1:
+        output = bool(self._scenes)
+        if output:
+            output = self._scenes[0].update(dt)
+            if not output and len(self._scenes) > 1:
                 self._scenes.popleft()
-        return bool(self._scenes)
+                self._scenes[0].initialize()
+        return output
+
+    def initialize(self) -> None:
+        pass
 
     def predraw(self) -> None:
         if self._scenes:
@@ -60,21 +86,32 @@ class AbstractScene(SceneInterface):
         self._lifeTime = lifeTime
         self._root = root
         self._config = config
+        self._growthDirection = 1.0
+
+    def setGrowthDirection(self, growthDirection: float) -> None:
+        self._growthDirection = growthDirection
 
     def update(self, dt: float) -> bool:
         self._root.grow(
-            food=dt * self._config.growthSpeed,
+            food=dt * self._config.growthSpeed * self._growthDirection,
             offspringConfig=self._config.offspringConfig,
         )
         self._lifeTime -= dt
         self.updateScene(progress=1.0 - max(0.0, self._lifeTime / self._fullTime))
         return self._lifeTime > 0.0
 
+    def initialize(self) -> None:
+        self.initializeTree(tree=self._root)
+
     # === PROTECTED ===
 
     @abc.abstractmethod
     def updateScene(self, progress: float) -> None:
         """Called during update with the current progress of the scene's lifetime (0.0 to 1.0)."""
+
+    @abc.abstractmethod
+    def initializeTree(self, tree: Branch) -> None:
+        """Called during initialization with the tree root, allowing for scene-specific tree setup."""
 
 
 class BasicTexturedScene(AbstractScene):
@@ -87,6 +124,9 @@ class BasicTexturedScene(AbstractScene):
     # === PROTECTED ===
 
     def updateScene(self, progress: float) -> None:
+        pass
+
+    def initializeTree(self, tree: Branch) -> None:
         pass
 
 
@@ -138,12 +178,12 @@ class RedSunScene(AbstractScene):
 
     def postdraw(self, buffer: pyglet.image.AbstractImage) -> None:
         y = TREE_Y - buffer.height
-        self._ground = pyglet.sprite.Sprite(
+        ground = pyglet.sprite.Sprite(
             buffer, x=0, y=y, program=self._shadowShaderProgram
         )
 
         with self._shadowShaderProgram:
-            self._ground.draw()
+            ground.draw()
 
     # === PROTECTED ===
 
@@ -161,5 +201,76 @@ class RedSunScene(AbstractScene):
         self._sun.y = sunY
         self._sky.color = (255, 255, 255, skyAlpha)
 
-        self._ground.program["progress"] = progress
-        self._ground.program["progress_slope"] = 5.0
+        self._shadowShaderProgram["progress"] = progress
+        self._shadowShaderProgram["progress_slope"] = 5.0
+
+    def initializeTree(self, tree: Branch) -> None:
+        pass
+
+
+class GalaxyScene(AbstractScene):
+    def __init__(
+        self,
+        lifeTime: float,
+        root: Branch,
+        config: Config,
+        windowSize: Point,
+    ) -> None:
+        super().__init__(lifeTime, root, config)
+        self._windowSize = windowSize
+        self._treeRoot = root  # for manipulating colors
+
+        # textures
+        self._branchTexture = SolidColorBranchTexture(Color(r=0, g=0, b=0))
+
+        # background
+        self._backgroundImg = pyglet.image.load(GALAXY_TEXTURE_PATH.as_posix())
+        scale = 1.2
+        self._wiggleRoom = max(0, self._backgroundImg.width * scale - windowSize.x)
+        self._backgroundSprite = pyglet.sprite.Sprite(
+            self._backgroundImg,
+            x=0,
+            y=TREE_Y,
+        )
+        self._backgroundSprite.scale = scale
+
+        # reflection
+        vertShader = readFile(REFLECTION_VERTEX_SHADER_PATH)
+        fragShader = readFile(REFLECTION_FRAGMENT_SHADER_PATH)
+        self._reflectionShaderProgram = pyglet.graphics.shader.ShaderProgram(
+            pyglet.graphics.shader.Shader(vertShader, "vertex"),
+            pyglet.graphics.shader.Shader(fragShader, "fragment"),
+        )
+
+        self._isDying = False
+
+    def predraw(self) -> None:
+        self._backgroundSprite.draw()
+
+    def postdraw(self, buffer: pyglet.image.AbstractImage) -> None:
+        y = TREE_Y - buffer.height
+        reflection = pyglet.sprite.Sprite(
+            buffer, x=0, y=y, program=self._reflectionShaderProgram
+        )
+        with self._reflectionShaderProgram:
+            reflection.draw()
+
+    # === PROTECTED ===
+
+    def updateScene(self, progress: float) -> None:
+        cosineProgress = ((1 - math.cos(progress * math.pi)) / 2) ** 0.1
+        self._backgroundSprite.opacity = int(255 * cosineProgress)
+        self._backgroundSprite.x = -self._wiggleRoom * progress
+
+        colorProgress = ((1 - math.cos(progress * 16 * math.pi)) / 2) ** 2
+        value = int(255 * colorProgress)
+        self._branchTexture = SolidColorBranchTexture(Color(r=value, g=value, b=value))
+        self._treeRoot.propagateImage(self._branchTexture)
+        self._reflectionShaderProgram["time"] = progress * 10.0
+
+        if progress > 0.5 and not self._isDying:
+            self._isDying = True
+            self.setGrowthDirection(-0.4)
+
+    def initializeTree(self, tree: Branch) -> None:
+        tree.replaceImage(self._branchTexture)
