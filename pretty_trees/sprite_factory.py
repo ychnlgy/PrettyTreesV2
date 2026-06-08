@@ -15,6 +15,10 @@ class SpriteFactoryInterface(abc.ABC):
     def getDimensions(self) -> tuple[float, float]:
         """Returns the dimensions of the sprite as (width, height)."""
 
+    @abc.abstractmethod
+    def replaceTexture(self, newTexture: BranchTextureInterface) -> None:
+        """Replaces the texture used for the sprite."""
+
 
 class BranchSpriteFactory(SpriteFactoryInterface):
     def __init__(
@@ -36,3 +40,6 @@ class BranchSpriteFactory(SpriteFactoryInterface):
 
     def getDimensions(self) -> tuple[float, float]:
         return self._branchTexture.getDimensions()
+
+    def replaceTexture(self, newTexture: BranchTextureInterface) -> None:
+        self._branchTexture = newTexture

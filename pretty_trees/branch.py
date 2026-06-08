@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 import pyglet
 
+from .branch_texture import BranchTextureInterface
 from .geometry import Point
 from .sprite_factory import BranchSpriteFactory
 from .utils import cosineInterpolate, randDecay, randVariance
@@ -82,6 +83,12 @@ class Branch:
         self._position = position
         self._sprite.x = position.x
         self._sprite.y = position.y
+
+    def replaceImage(self, newTexture: BranchTextureInterface) -> None:
+        self._spriteFactory.replaceTexture(newTexture)
+        self._sprite.image = newTexture.getImage()
+        for child in self._offspring:
+            child.replaceImage(newTexture)
 
     # === PRIVATE ===
 

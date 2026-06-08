@@ -1,4 +1,5 @@
 import abc
+import pathlib
 
 import pyglet
 
@@ -23,13 +24,16 @@ class BranchTextureInterface(abc.ABC):
     def getDimensions(self) -> tuple[float, float]:
         """Returns the dimensions of the sprite as (width, height)."""
 
+    @abc.abstractmethod
+    def getImage(self) -> pyglet.image.AbstractImage:
+        """Returns the image used for the sprite."""
 
-class SolidColorBranchTexture(BranchTextureInterface):
-    def __init__(self, color: Color) -> None:
+
+class AbstractBranchTexture(BranchTextureInterface):
+    def __init__(self, image: pyglet.image.AbstractImage) -> None:
         super().__init__()
-        pattern = pyglet.image.SolidColorImagePattern(color.asTuple())
-        self._image = pattern.create_image(DEFAULT_WIDTH, DEFAULT_HEIGHT)
-        self._image.anchor_y = DEFAULT_HEIGHT // 2
+        image.anchor_y = image.height // 2
+        self._image = image
 
     def createSprite(
         self,
@@ -48,3 +52,19 @@ class SolidColorBranchTexture(BranchTextureInterface):
 
     def getDimensions(self) -> tuple[float, float]:
         return self._image.width, self._image.height
+
+    def getImage(self) -> pyglet.image.AbstractImage:
+        return self._image
+
+
+class SolidColorBranchTexture(AbstractBranchTexture):
+    def __init__(self, color: Color) -> None:
+        pattern = pyglet.image.SolidColorImagePattern(color.asTuple())
+        image = pattern.create_image(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+        super().__init__(image)
+
+
+class ImageBranchTexture(AbstractBranchTexture):
+    def __init__(self, imagePath: pathlib.Path) -> None:
+        image = pyglet.image.load(imagePath.as_posix())
+        super().__init__(image)

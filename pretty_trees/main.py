@@ -1,24 +1,27 @@
-import pathlib
-
 import pyglet
 
 from .branch import Branch, BranchState, OffspringConfig
-from .branch_texture import SolidColorBranchTexture
-from .color import Color
+from .branch_texture import ImageBranchTexture
 from .config import BranchCurvatureConfig, Config
+from .constants import (
+    BRANCH_FRAGMENT_SHADER_PATH,
+    BRANCH_VERTEX_SHADER_PATH,
+    SCRIBBLE_TEXTURE_PATH,
+    TREE_X,
+    TREE_Y,
+)
 from .curvature import computeCurvatureCircle
 from .geometry import Point
+from .scene import AggregateScene, BasicTexturedScene, RedSunScene
 from .sprite_factory import BranchSpriteFactory
 from .utils import readFile
 
-CURRENT_DIRECTORY = pathlib.Path(__file__).parent
-SHADER_DIRECTORY = CURRENT_DIRECTORY / "shaders"
-BRANCH_VERTEX_SHADER_PATH = SHADER_DIRECTORY / "branch_vertex.glsl"
-BRANCH_FRAGMENT_SHADER_PATH = SHADER_DIRECTORY / "branch_fragment.glsl"
-
 
 def main(config: Config) -> None:
-    window = pyglet.window.Window(1200, 900, caption="Pretty Trees")
+    windowSize = Point(x=1200, y=900)
+    window = pyglet.window.Window(
+        int(windowSize.x), int(windowSize.y), caption="Pretty Trees"
+    )
     batch = pyglet.graphics.Batch()
 
     vertShader = readFile(BRANCH_VERTEX_SHADER_PATH)
@@ -28,15 +31,33 @@ def main(config: Config) -> None:
         pyglet.graphics.shader.Shader(fragShader, "fragment"),
     )
 
-    branchTexture = SolidColorBranchTexture(Color(r=0, g=120, b=180))
+    # branchTexture = SolidColorBranchTexture(Color(r=0, g=120, b=180))
+    branchTexture = ImageBranchTexture(SCRIBBLE_TEXTURE_PATH)
     spriteFactory = BranchSpriteFactory(
         batch=batch, shaderProgram=shaderProgram, branchTexture=branchTexture
     )
     root = Branch(
         spriteFactory=spriteFactory,
-        position=Point(x=600, y=100),
+        position=Point(x=TREE_X, y=TREE_Y),
         startState=config.startBranchState,
         endState=config.endBranchState,
+    )
+
+    scene = AggregateScene()
+    scene.addScene(
+        BasicTexturedScene(
+            lifeTime=0.1,
+            root=root,
+            config=config,
+        )
+    )
+    scene.addScene(
+        RedSunScene(
+            lifeTime=10.0,
+            root=root,
+            config=config,
+            windowSize=windowSize,
+        )
     )
 
     curvature = computeCurvatureCircle(
@@ -48,13 +69,27 @@ def main(config: Config) -> None:
         shaderProgram["branch_curvature_radius"] = curvature.radius
         shaderProgram["depth_effect_multiplier"] = config.depthEffectMultiplier
 
+    # bufferPattern = pyglet.image.SolidColorImagePattern(color=(0, 0, 0, 0))
+    # buffer = bufferPattern.create_image(int(windowSize.x), int(windowSize.y)).get_texture()
+
+    buffer = pyglet.image.create(int(windowSize.x), int(windowSize.y) - TREE_Y)
+    bufferTex = buffer.get_texture()
+
     @window.event
     def on_draw() -> None:
         window.clear()
+        scene.predraw()
         batch.draw()
+        screenshot = (
+            pyglet.image.get_buffer_manager()
+            .get_color_buffer()
+            .get_region(0, TREE_Y, int(windowSize.x), int(windowSize.y) - TREE_Y)
+        )
+        bufferTex.blit_into(screenshot, 0, 0, 0)
+        scene.postdraw(buffer)
 
     def update(dt: float) -> None:
-        root.grow(food=dt * 2.0, offspringConfig=config.offspringConfig)
+        scene.update(dt)
 
     pyglet.clock.schedule_interval(update, 1 / 60)
     pyglet.app.run()
@@ -67,7 +102,7 @@ if __name__ == "__main__":
             endThickness=0.80,
         ),
         startBranchState=BranchState(angle=-90.0, length=0.0, width=0.0, depth=0.0),
-        endBranchState=BranchState(angle=-90.0, length=100.0, width=20.0, depth=-0.5),
+        endBranchState=BranchState(angle=-90.0, length=100.0, width=20.0, depth=0.0),
         offspringConfig=OffspringConfig(
             numChildren=2,
             minThickness=1.2,
@@ -77,8 +112,9 @@ if __name__ == "__main__":
             thicknessDecayRange=(0.7, 0.85),
             lengthDecayRange=(0.8, 0.95),
             angleVariance=30.0,
-            depthVariance=0.05,
+            depthVariance=0.15,
         ),
-        depthEffectMultiplier=0.7,
+        depthEffectMultiplier=0.0,
+        growthSpeed=2.0,
     )
     main(config)

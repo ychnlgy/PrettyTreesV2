@@ -18,3 +18,4 @@ class Config:
     offspringConfig: OffspringConfig
 
     depthEffectMultiplier: float
+    growthSpeed: float
