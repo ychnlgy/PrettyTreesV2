@@ -3,6 +3,7 @@ import math
 from collections import deque
 
 import pyglet
+import tqdm
 
 from .branch import Branch
 from .branch_texture import SolidColorBranchTexture
@@ -69,7 +70,8 @@ class AggregateScene(SceneInterface):
         return output
 
     def initialize(self) -> None:
-        pass
+        if self._scenes:
+            self._scenes[0].initialize()
 
     def predraw(self) -> None:
         if self._scenes:
@@ -98,6 +100,8 @@ class AbstractScene(SceneInterface):
         self._config = config
         self._growthDirection = 1.0
 
+        self._bar: tqdm.tqdm | None = None
+
     def setGrowthDirection(self, growthDirection: float) -> None:
         self._growthDirection = growthDirection
 
@@ -107,10 +111,20 @@ class AbstractScene(SceneInterface):
             offspringConfig=self._config.offspringConfig,
         )
         self._lifeTime -= dt
-        self.updateScene(progress=1.0 - max(0.0, self._lifeTime / self._fullTime))
+        progress = 1.0 - max(0.0, self._lifeTime / self._fullTime)
+        self.updateScene(progress=progress)
+
+        if self._bar is not None:
+            self._bar.n = int(progress * 100.0)
+            self._bar.refresh()
+            if self._lifeTime <= 0.0:
+                self._bar.close()
+                self._bar = None
+
         return self._lifeTime > 0.0
 
     def initialize(self) -> None:
+        self._bar = tqdm.tqdm(total=100, desc=type(self).__name__, ncols=80)
         self.initializeTree(tree=self._root)
 
     # === PROTECTED ===
@@ -247,7 +261,7 @@ class GalaxyScene(AbstractScene):
 
         # background
         self._backgroundImg = pyglet.image.load(GALAXY_TEXTURE_PATH.as_posix())
-        scale = 1.2
+        scale = 1.5
         self._wiggleRoom = max(0, self._backgroundImg.width * scale - windowSize.x)
         self._backgroundSprite = pyglet.sprite.Sprite(
             self._backgroundImg,
@@ -288,7 +302,7 @@ class GalaxyScene(AbstractScene):
         self._backgroundSprite.opacity = int(255 * cosineProgress)
         self._backgroundSprite.x = -self._wiggleRoom * progress
 
-        if progress > 0.1:
+        if progress > 0.2:
             delayedProgress = (progress - 0.1) / 0.9
             colorProgress = ((1 - math.cos(delayedProgress * 16 * math.pi)) / 2) ** 4
             value = int(255 * colorProgress)
@@ -360,7 +374,7 @@ class SnowScene(AbstractScene):
     def initializeTree(self, tree: Branch) -> None:
         branchTexture = SolidColorBranchTexture(Color(r=200, g=200, b=200))
         self._treeRoot.replaceImage(branchTexture)
-        self.setGrowthDirection(0.2)
+        self.setGrowthDirection(1.0)
 
         # set clear to be white
         pyglet.gl.glClearColor(1.0, 1.0, 1.0, 1.0)

@@ -1,1 +1,2 @@
+opencv-python==4.13.0.92
 pyglet==2.1.14

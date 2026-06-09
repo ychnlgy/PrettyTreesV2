@@ -1,3 +1,7 @@
+import random
+
+import cv2
+import numpy
 import pyglet
 
 from .branch import Branch, BranchState, OffspringConfig
@@ -22,12 +26,19 @@ from .sprite_factory import BranchSpriteFactory
 from .utils import readFile
 
 
+def makeWindow(recording: bool) -> pyglet.window.Window:
+    title = "Pretty Trees"
+    if recording:
+        return pyglet.window.Window(1920, 1080, caption=title, visible=False)
+    else:
+        return pyglet.window.Window(fullscreen=True, caption=title)
+
+
 def main(config: Config) -> None:
-    windowSize = Point(x=1920, y=1080)
-    # window = pyglet.window.Window(
-    #     int(windowSize.x), int(windowSize.y), caption="Pretty Trees"
-    # )
-    window = pyglet.window.Window(fullscreen=True, caption="Pretty Trees")
+    cv2Recording = False
+    random.seed(1337)
+    window = makeWindow(cv2Recording)
+    windowSize = Point(x=window.width, y=window.height)
     batch = pyglet.graphics.Batch()
 
     vertShader = readFile(BRANCH_VERTEX_SHADER_PATH)
@@ -37,7 +48,6 @@ def main(config: Config) -> None:
         pyglet.graphics.shader.Shader(fragShader, "fragment"),
     )
 
-    # branchTexture = SolidColorBranchTexture(Color(r=0, g=120, b=180))
     branchTexture = ImageBranchTexture(SCRIBBLE_TEXTURE_PATH)
     spriteFactory = BranchSpriteFactory(
         batch=batch, shaderProgram=shaderProgram, branchTexture=branchTexture
@@ -76,7 +86,7 @@ def main(config: Config) -> None:
 
     scene.addScene(
         SnowScene(
-            lifeTime=40.0,
+            lifeTime=25.0,
             root=root,
             config=config,
             windowSize=windowSize,
@@ -92,14 +102,17 @@ def main(config: Config) -> None:
         shaderProgram["branch_curvature_radius"] = curvature.radius
         shaderProgram["depth_effect_multiplier"] = config.depthEffectMultiplier
 
-    # bufferPattern = pyglet.image.SolidColorImagePattern(color=(0, 0, 0, 0))
-    # buffer = bufferPattern.create_image(int(windowSize.x), int(windowSize.y)).get_texture()
-
     buffer = pyglet.image.create(int(windowSize.x), int(windowSize.y) - TREE_Y)
     bufferTex = buffer.get_texture()
 
-    @window.event
-    def on_draw() -> None:
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # ty: ignore[unresolved-attribute]
+    fps = 30.0
+    width, height = int(windowSize.x), int(windowSize.y)
+    videoWriter = cv2.VideoWriter("output.mp4", fourcc, fps, (width, height))
+
+    scene.initialize()
+
+    def drawUpdate() -> None:
         window.clear()
         scene.predraw()
         if not scene.skipTreeDrawing():
@@ -112,11 +125,35 @@ def main(config: Config) -> None:
         bufferTex.blit_into(screenshot, 0, 0, 0)
         scene.postdraw(buffer)
 
+    @window.event
+    def on_draw() -> None:
+        drawUpdate()
+
+    def screenRecord() -> None:
+        drawUpdate()
+
+        # Convert the buffer to a format suitable for OpenCV
+        imageData = (
+            pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
+        )
+        data = imageData.get_data("RGB", imageData.width * 3)
+        frame = numpy.frombuffer(data, dtype=numpy.uint8).reshape(
+            imageData.height, imageData.width, 3
+        )
+        frameBgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        videoWriter.write(cv2.flip(frameBgr, 0))
+
     def update(dt: float) -> None:
-        scene.update(dt)
+        delta = 1 / fps if cv2Recording else dt
+        scene.update(delta)
+        if cv2Recording:
+            screenRecord()
 
     pyglet.clock.schedule_interval(update, 1 / 60)
-    pyglet.app.run()
+    try:
+        pyglet.app.run()
+    finally:
+        videoWriter.release()
 
 
 if __name__ == "__main__":
