@@ -14,6 +14,8 @@ from .constants import (
     REFLECTION_VERTEX_SHADER_PATH,
     SHADOW_FRAGMENT_SHADER_PATH,
     SHADOW_VERTEX_SHADER_PATH,
+    SNOW_FRAGMENT_SHADER_PATH,
+    SNOW_VERTEX_SHADER_PATH,
     TREE_Y,
 )
 from .geometry import Point
@@ -40,6 +42,10 @@ class SceneInterface(abc.ABC):
     @abc.abstractmethod
     def postdraw(self, buffer: pyglet.image.AbstractImage) -> None:
         """Called after drawing the scene."""
+
+    @abc.abstractmethod
+    def skipTreeDrawing(self) -> bool:
+        """Returns True if the scene wants to skip drawing the tree (e.g. for a fade-out effect)."""
 
 
 class AggregateScene(SceneInterface):
@@ -72,6 +78,10 @@ class AggregateScene(SceneInterface):
     def postdraw(self, buffer: pyglet.image.AbstractImage) -> None:
         if self._scenes:
             self._scenes[0].postdraw(buffer)
+
+    def skipTreeDrawing(self) -> bool:
+        assert self._scenes
+        return self._scenes[0].skipTreeDrawing()
 
 
 class AbstractScene(SceneInterface):
@@ -120,6 +130,9 @@ class BasicTexturedScene(AbstractScene):
 
     def postdraw(self, buffer: pyglet.image.AbstractImage) -> None:
         pass
+
+    def skipTreeDrawing(self) -> bool:
+        return False
 
     # === PROTECTED ===
 
@@ -172,6 +185,8 @@ class RedSunScene(AbstractScene):
             pyglet.graphics.shader.Shader(fragShader, "fragment"),
         )
 
+        self._skipTreeDrawing = False
+
     def predraw(self) -> None:
         self._sky.draw()
         self._sun.draw()
@@ -185,17 +200,24 @@ class RedSunScene(AbstractScene):
         with self._shadowShaderProgram:
             ground.draw()
 
+    def skipTreeDrawing(self) -> bool:
+        return self._skipTreeDrawing
+
     # === PROTECTED ===
 
     def updateScene(self, progress: float) -> None:
+        xProgress = progress
         yProgress = ((1 - math.cos(progress * 2 * math.pi)) / 2) ** 0.1
-        sunX = self._minSunX + (self._maxSunX - self._minSunX) * progress
+        sunX = self._minSunX + (self._maxSunX - self._minSunX) * xProgress
         sunY = self._minSunY + (self._maxSunY - self._minSunY) * yProgress
 
         skyAlpha = int(
             255
             * min(1.0, (sunY - self._minSunSky) / (self._maxSunSky - self._minSunSky))
         )
+
+        if progress > 0.5 and skyAlpha < 10:
+            self._skipTreeDrawing = True
 
         self._sun.x = sunX
         self._sun.y = sunY
@@ -233,6 +255,7 @@ class GalaxyScene(AbstractScene):
             y=TREE_Y,
         )
         self._backgroundSprite.scale = scale
+        self._backgroundSprite.opacity = 0
 
         # reflection
         vertShader = readFile(REFLECTION_VERTEX_SHADER_PATH)
@@ -255,22 +278,89 @@ class GalaxyScene(AbstractScene):
         with self._reflectionShaderProgram:
             reflection.draw()
 
+    def skipTreeDrawing(self) -> bool:
+        return False
+
     # === PROTECTED ===
 
     def updateScene(self, progress: float) -> None:
-        cosineProgress = ((1 - math.cos(progress * math.pi)) / 2) ** 0.1
+        cosineProgress = ((1 - math.cos(progress * 2 * math.pi)) / 2) ** 0.8
         self._backgroundSprite.opacity = int(255 * cosineProgress)
         self._backgroundSprite.x = -self._wiggleRoom * progress
 
-        colorProgress = ((1 - math.cos(progress * 16 * math.pi)) / 2) ** 2
-        value = int(255 * colorProgress)
-        self._branchTexture = SolidColorBranchTexture(Color(r=value, g=value, b=value))
-        self._treeRoot.propagateImage(self._branchTexture)
-        self._reflectionShaderProgram["time"] = progress * 10.0
+        if progress > 0.1:
+            delayedProgress = (progress - 0.1) / 0.9
+            colorProgress = ((1 - math.cos(delayedProgress * 16 * math.pi)) / 2) ** 4
+            value = int(255 * colorProgress)
+            self._branchTexture = SolidColorBranchTexture(
+                Color(r=value, g=value, b=value)
+            )
+            self._treeRoot.propagateImage(self._branchTexture)
+            self._reflectionShaderProgram["time"] = progress * 10.0
 
-        if progress > 0.5 and not self._isDying:
+        if progress > 0.4 and not self._isDying:
             self._isDying = True
-            self.setGrowthDirection(-0.4)
+            self.setGrowthDirection(-0.5)
 
     def initializeTree(self, tree: Branch) -> None:
         tree.replaceImage(self._branchTexture)
+
+
+class SnowScene(AbstractScene):
+    def __init__(
+        self,
+        lifeTime: float,
+        root: Branch,
+        config: Config,
+        windowSize: Point,
+    ) -> None:
+        super().__init__(lifeTime, root, config)
+        self._windowSize = windowSize
+        self._treeRoot = root  # for manipulating colors
+
+        # shaders
+        vertShader = readFile(SNOW_VERTEX_SHADER_PATH)
+        fragShader = readFile(SNOW_FRAGMENT_SHADER_PATH)
+        self._snowShaderProgram = pyglet.graphics.shader.ShaderProgram(
+            pyglet.graphics.shader.Shader(vertShader, "vertex"),
+            pyglet.graphics.shader.Shader(fragShader, "fragment"),
+        )
+
+        # background
+        pattern = pyglet.image.SolidColorImagePattern((255, 255, 255, 255))
+        image = pattern.create_image(int(windowSize.x), int(windowSize.y))
+        self._background = pyglet.sprite.Sprite(
+            image, x=0, y=0, program=self._snowShaderProgram
+        )
+
+        # foreground
+        self._foreground = pyglet.shapes.Rectangle(
+            x=0, y=0, width=windowSize.x, height=windowSize.y, color=(0, 0, 0)
+        )
+
+    def predraw(self) -> None:
+        pass
+
+    def postdraw(self, buffer: pyglet.image.AbstractImage) -> None:
+        self._background.draw()
+        self._foreground.draw()
+
+    def skipTreeDrawing(self) -> bool:
+        return False
+
+    # === PROTECTED ===
+
+    def updateScene(self, progress: float) -> None:
+        self._snowShaderProgram["time"] = progress * 10.0
+
+        fadeInWindow = 0.2
+        delta = max(0.0, fadeInWindow - progress) / fadeInWindow
+        self._foreground.opacity = int(255 * delta)
+
+    def initializeTree(self, tree: Branch) -> None:
+        branchTexture = SolidColorBranchTexture(Color(r=200, g=200, b=200))
+        self._treeRoot.replaceImage(branchTexture)
+        self.setGrowthDirection(0.2)
+
+        # set clear to be white
+        pyglet.gl.glClearColor(1.0, 1.0, 1.0, 1.0)

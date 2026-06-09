@@ -7,21 +7,27 @@ from .constants import (
     BRANCH_FRAGMENT_SHADER_PATH,
     BRANCH_VERTEX_SHADER_PATH,
     SCRIBBLE_TEXTURE_PATH,
-    TREE_X,
     TREE_Y,
 )
 from .curvature import computeCurvatureCircle
 from .geometry import Point
-from .scene import AggregateScene, BasicTexturedScene, GalaxyScene, RedSunScene
+from .scene import (
+    AggregateScene,
+    BasicTexturedScene,
+    GalaxyScene,
+    RedSunScene,
+    SnowScene,
+)
 from .sprite_factory import BranchSpriteFactory
 from .utils import readFile
 
 
 def main(config: Config) -> None:
-    windowSize = Point(x=1200, y=900)
-    window = pyglet.window.Window(
-        int(windowSize.x), int(windowSize.y), caption="Pretty Trees"
-    )
+    windowSize = Point(x=1920, y=1080)
+    # window = pyglet.window.Window(
+    #     int(windowSize.x), int(windowSize.y), caption="Pretty Trees"
+    # )
+    window = pyglet.window.Window(fullscreen=True, caption="Pretty Trees")
     batch = pyglet.graphics.Batch()
 
     vertShader = readFile(BRANCH_VERTEX_SHADER_PATH)
@@ -38,7 +44,7 @@ def main(config: Config) -> None:
     )
     root = Branch(
         spriteFactory=spriteFactory,
-        position=Point(x=TREE_X, y=TREE_Y),
+        position=Point(x=windowSize.x // 2, y=TREE_Y),
         startState=config.startBranchState,
         endState=config.endBranchState,
     )
@@ -46,14 +52,14 @@ def main(config: Config) -> None:
     scene = AggregateScene()
     scene.addScene(
         BasicTexturedScene(
-            lifeTime=1.0,
+            lifeTime=6.0,
             root=root,
             config=config,
         )
     )
     scene.addScene(
         RedSunScene(
-            lifeTime=1.0,
+            lifeTime=16.0,
             root=root,
             config=config,
             windowSize=windowSize,
@@ -61,7 +67,16 @@ def main(config: Config) -> None:
     )
     scene.addScene(
         GalaxyScene(
-            lifeTime=20.0,
+            lifeTime=46.0,
+            root=root,
+            config=config,
+            windowSize=windowSize,
+        )
+    )
+
+    scene.addScene(
+        SnowScene(
+            lifeTime=40.0,
             root=root,
             config=config,
             windowSize=windowSize,
@@ -87,7 +102,8 @@ def main(config: Config) -> None:
     def on_draw() -> None:
         window.clear()
         scene.predraw()
-        batch.draw()
+        if not scene.skipTreeDrawing():
+            batch.draw()
         screenshot = (
             pyglet.image.get_buffer_manager()
             .get_color_buffer()
@@ -124,6 +140,6 @@ if __name__ == "__main__":
             depthVariance=0.15,
         ),
         depthEffectMultiplier=0.0,
-        growthSpeed=4.0,
+        growthSpeed=1.0,
     )
     main(config)
