@@ -157,6 +157,40 @@ class BasicTexturedScene(AbstractScene):
         pass
 
 
+class Sun:
+    """3 concentric circles.
+
+    Outer is the largest and most pale, inner is the smallest and most vibrant.
+    The outer expands the least over time, while the inner expands the most (but not exceeding the outer).
+    """
+
+    def __init__(self, x: float, y: float) -> None:
+        self._baseRadii = [90, 60, 40]
+        self._circles = [
+            pyglet.shapes.Circle(
+                x=x, y=y, radius=self._baseRadii[0], color=(255, 0, 0, 50)
+            ),
+            pyglet.shapes.Circle(
+                x=x, y=y, radius=self._baseRadii[1], color=(255, 0, 0, 150)
+            ),
+            pyglet.shapes.Circle(
+                x=x, y=y, radius=self._baseRadii[2], color=(255, 0, 0)
+            ),
+        ]
+
+    def update(self, progress: float, x: float, y: float) -> None:
+        circleProgress = 1 - ((1 - math.cos(progress * 2 * math.pi)) / 2) ** 0.5
+        for i, circle in enumerate(self._circles):
+            expansion = 1.0 + circleProgress * (i + 1) * 0.8
+            circle.radius = self._baseRadii[i] * expansion
+            circle.x = x
+            circle.y = y
+
+    def draw(self) -> None:
+        for circle in self._circles:
+            circle.draw()
+
+
 class RedSunScene(AbstractScene):
     def __init__(
         self,
@@ -178,12 +212,7 @@ class RedSunScene(AbstractScene):
         self._maxSunSky = windowSize.y * 0.25
 
         # sprites
-        self._sun = pyglet.shapes.Circle(
-            x=self._minSunX,
-            y=self._minSunY,
-            radius=50,
-            color=(255, 0, 0),
-        )
+        self._sun = Sun(x=self._minSunX, y=self._minSunY)
         self._sky = pyglet.shapes.Rectangle(
             x=0,
             y=0,
@@ -233,8 +262,7 @@ class RedSunScene(AbstractScene):
         if progress > 0.5 and skyAlpha < 10:
             self._skipTreeDrawing = True
 
-        self._sun.x = sunX
-        self._sun.y = sunY
+        self._sun.update(progress, sunX, sunY)
         self._sky.color = (255, 255, 255, skyAlpha)
 
         self._shadowShaderProgram["progress"] = progress

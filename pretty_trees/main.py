@@ -29,7 +29,7 @@ from .utils import readFile
 def makeWindow(recording: bool) -> pyglet.window.Window:
     title = "Pretty Trees"
     if recording:
-        return pyglet.window.Window(1920, 1080, caption=title, visible=False)
+        return pyglet.window.Window(1920, 1080, caption=title)
     else:
         return pyglet.window.Window(fullscreen=True, caption=title)
 
