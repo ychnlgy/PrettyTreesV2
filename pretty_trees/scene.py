@@ -250,7 +250,7 @@ class RedSunScene(AbstractScene):
 
     def updateScene(self, progress: float) -> None:
         xProgress = progress
-        yProgress = ((1 - math.cos(progress * 2 * math.pi)) / 2) ** 0.1
+        yProgress = ((1 - math.cos(progress * 2 * math.pi)) / 2) ** 0.05
         sunX = self._minSunX + (self._maxSunX - self._minSunX) * xProgress
         sunY = self._minSunY + (self._maxSunY - self._minSunY) * yProgress
 
@@ -330,7 +330,7 @@ class GalaxyScene(AbstractScene):
         self._backgroundSprite.opacity = int(255 * cosineProgress)
         self._backgroundSprite.x = -self._wiggleRoom * progress
 
-        if progress > 0.2:
+        if progress > 0.1:
             delayedProgress = (progress - 0.1) / 0.9
             colorProgress = ((1 - math.cos(delayedProgress * 16 * math.pi)) / 2) ** 4
             value = int(255 * colorProgress)
