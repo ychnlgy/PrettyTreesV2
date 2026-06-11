@@ -36,7 +36,7 @@ def makeWindow(recording: bool) -> pyglet.window.Window:
 
 def main(config: Config) -> None:
     cv2Recording = False
-    random.seed(1337)
+    random.seed(1234)  # for reproducibility
     window = makeWindow(cv2Recording)
     windowSize = Point(x=window.width, y=window.height)
     batch = pyglet.graphics.Batch()
@@ -145,7 +145,8 @@ def main(config: Config) -> None:
 
     def update(dt: float) -> None:
         delta = 1 / fps if cv2Recording else dt
-        scene.update(delta)
+        if not scene.update(delta):
+            pyglet.app.exit()
         if cv2Recording:
             screenRecord()
 

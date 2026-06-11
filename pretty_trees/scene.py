@@ -67,6 +67,7 @@ class AggregateScene(SceneInterface):
             if not output and len(self._scenes) > 1:
                 self._scenes.popleft()
                 self._scenes[0].initialize()
+                output = True
         return output
 
     def initialize(self) -> None:
