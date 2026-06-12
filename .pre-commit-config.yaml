@@ -1,0 +1,83 @@
+repos:
+ - repo: https://github.com/pre-commit/pre-commit-hooks
+   rev: v2.3.0
+   hooks:
+    - id: requirements-txt-fixer
+      stages: [commit]
+    - id: check-added-large-files
+      stages: [commit]
+    - id: check-json
+      stages: [commit]
+    - id: check-ast
+      stages: [commit]
+    - id: check-case-conflict
+      stages: [commit]
+    - id: check-docstring-first
+      stages: [commit]
+    - id: check-merge-conflict
+      stages: [commit]
+    - id: check-yaml
+      stages: [commit]
+    - id: sort-simple-yaml
+      stages: [commit]
+    - id: check-builtin-literals
+      stages: [commit]
+ - repo: local
+   hooks:
+    - id: isort
+      stages: [commit]
+      name: Sort imports using isort
+      entry: isort --profile black
+      exclude: _pb2.py
+      language: system
+      types: [python]
+      pass_filenames: true
+    - id: black
+      stages: [commit]
+      name: Reformat via Black
+      entry: black
+      exclude: _pb2.py
+      language: system
+      types: [python]
+      pass_filenames: true
+    - id: ty
+      stages: [commit]
+      name: Fast type checking using ty
+      entry: ty check
+      exclude: _pb2.py
+      language: system
+      types: [python]
+      pass_filenames: false
+    - id: ruff
+      stages: [commit]
+      name: Fast lint analysis using ruff
+      entry: ruff check
+      exclude: _pb2.py
+      language: system
+      types: [python]
+      pass_filenames: false
+    - id: pytest
+      stages: [commit]
+      name: Run fast unit tests
+      entry: pytest
+      language: system
+      types: [python]
+      pass_filenames: false
+    # push hooks
+    - id: mypy
+      require_serial: true  # otherwise it runs several times
+      stages: [push]
+      name: Slow MyPy static typing
+      entry: mypy
+      exclude: _pb2.py
+      language: system
+      types: [python]
+      pass_filenames: true
+    - id: pylint
+      stages: [push]
+      name: Slow PyLint analysis
+      entry: pylint
+      exclude: _pb2.py
+      language: system
+      types: [python]
+      pass_filenames: true
