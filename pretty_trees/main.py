@@ -1,3 +1,4 @@
+# pylint: disable=no-member
 import random
 
 import cv2
@@ -30,8 +31,7 @@ def makeWindow(recording: bool) -> pyglet.window.Window:
     title = "Pretty Trees"
     if recording:
         return pyglet.window.Window(1920, 1080, caption=title)
-    else:
-        return pyglet.window.Window(fullscreen=True, caption=title)
+    return pyglet.window.Window(fullscreen=True, caption=title)
 
 
 def main(config: Config) -> None:
@@ -105,7 +105,7 @@ def main(config: Config) -> None:
     buffer = pyglet.image.create(int(windowSize.x), int(windowSize.y) - TREE_Y)
     bufferTex = buffer.get_texture()
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # ty: ignore[unresolved-attribute]
+    fourcc = cv2.VideoWriter.fourcc(*"mp4v")
     fps = 30.0
     width, height = int(windowSize.x), int(windowSize.y)
     videoWriter = cv2.VideoWriter("output.mp4", fourcc, fps, (width, height))
@@ -126,7 +126,7 @@ def main(config: Config) -> None:
         scene.postdraw(buffer)
 
     @window.event
-    def on_draw() -> None:
+    def onDraw() -> None:
         drawUpdate()
 
     def screenRecord() -> None:
@@ -158,7 +158,7 @@ def main(config: Config) -> None:
 
 
 if __name__ == "__main__":
-    config = Config(
+    treeConfig = Config(
         branchCurvature=BranchCurvatureConfig(
             midThickness=0.65,
             endThickness=0.80,
@@ -180,4 +180,4 @@ if __name__ == "__main__":
         depthEffectMultiplier=0.0,
         growthSpeed=1.0,
     )
-    main(config)
+    main(treeConfig)

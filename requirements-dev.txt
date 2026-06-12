@@ -9,3 +9,4 @@ pytest-cov==4.1.0
 ruff==0.15.10
 ty==0.0.29
 types-setuptools==75.2.0.20241025
+types-tqdm==4.68.0.20260608
