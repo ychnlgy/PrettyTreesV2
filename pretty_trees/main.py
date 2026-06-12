@@ -126,7 +126,7 @@ def main(config: Config) -> None:
         scene.postdraw(buffer)
 
     @window.event
-    def onDraw() -> None:
+    def on_draw() -> None:  # pylint: disable=invalid-name
         drawUpdate()
 
     def screenRecord() -> None:
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         endBranchState=BranchState(angle=-90.0, length=100.0, width=20.0, depth=0.0),
         offspringConfig=OffspringConfig(
             numChildren=2,
-            minThickness=1.2,
+            minThickness=2.0,
             minLength=10.0,
             fractionalFoodIntake=0.5,
             malnutrition=0.95,

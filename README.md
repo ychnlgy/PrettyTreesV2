@@ -13,6 +13,12 @@ pip install -r requirements-dev.txt
 pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
+### Quickstart
+```bash
+source venv/bin/activate
+python -m pretty_trees.main
+```
+
 ### Testing
 ```bash
 pytest --cov
